@@ -23,6 +23,7 @@ class Renderer(nn.Module):
         self.anti_aliasing = anti_aliasing
         self.background_color = background_color
         self.fill_back = fill_back
+        self.up = [0,1,0]
 
         # camera
         self.camera_mode = camera_mode
@@ -73,7 +74,9 @@ class Renderer(nn.Module):
         Implementation of forward rendering method
         The old API is preserved for back-compatibility with the Chainer implementation
         '''
-        
+        if mode == 'rgb+mask':
+            return self.render_rgb_and_mask(vertices, faces, textures, K, R, t, dist_coeffs, orig_size)
+
         if mode is None:
             return self.render(vertices, faces, textures, K, R, t, dist_coeffs, orig_size)
         elif mode == 'silhouettes':
@@ -91,7 +94,7 @@ class Renderer(nn.Module):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = nr.look_at(vertices, self.eye)
+            vertices = nr.look_at(vertices, self.eye, up=self.up)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
@@ -126,7 +129,7 @@ class Renderer(nn.Module):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = nr.look_at(vertices, self.eye)
+            vertices = nr.look_at(vertices, self.eye, up=self.up)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
@@ -153,7 +156,11 @@ class Renderer(nn.Module):
         images = nr.rasterize_depth(faces, self.image_size, self.anti_aliasing)
         return images
 
-    def render(self, vertices, faces, textures, K=None, R=None, t=None, dist_coeffs=None, orig_size=None):
+    def render_rgb_and_mask(self, vertices, faces, textures, K=None, R=None, t=None, dist_coeffs=None, orig_size=None):
+        return self.render(vertices, faces, textures, K=K, R=R, t=t, dist_coeffs=dist_coeffs, orig_size=orig_size, ret_m=True)
+
+
+    def render(self, vertices, faces, textures, K=None, R=None, t=None, dist_coeffs=None, orig_size=None, ret_m=False):
         # fill back
         if self.fill_back:
             faces = torch.cat((faces, faces[:, :, list(reversed(range(faces.shape[-1])))]), dim=1).detach()
@@ -172,7 +179,7 @@ class Renderer(nn.Module):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = nr.look_at(vertices, self.eye)
+            vertices = nr.look_at(vertices, self.eye, up=self.up)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
@@ -196,6 +203,11 @@ class Renderer(nn.Module):
 
         # rasterization
         faces = nr.vertices_to_faces(vertices, faces)
+        if ret_m:
+            imd = nr.rasterize_rgbad(
+                faces, textures, self.image_size, self.anti_aliasing, self.near, self.far, self.rasterizer_eps,
+            self.background_color)
+            return (imd['rgb'], imd['alpha'])
         images = nr.rasterize(
             faces, textures, self.image_size, self.anti_aliasing, self.near, self.far, self.rasterizer_eps,
             self.background_color)
