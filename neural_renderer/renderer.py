@@ -24,6 +24,7 @@ class Renderer(nn.Module):
         self.background_color = background_color
         self.fill_back = fill_back
         self.up = [0,1,0]
+        self.at = [0,0,0]
 
         # camera
         self.camera_mode = camera_mode
@@ -94,7 +95,7 @@ class Renderer(nn.Module):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = nr.look_at(vertices, self.eye, up=self.up)
+            vertices = nr.look_at(vertices, self.eye, at=self.at, up=self.up)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
@@ -129,7 +130,7 @@ class Renderer(nn.Module):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = nr.look_at(vertices, self.eye, up=self.up)
+            vertices = nr.look_at(vertices, self.eye, at=self.at, up=self.up)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
@@ -179,7 +180,7 @@ class Renderer(nn.Module):
 
         # viewpoint transformation
         if self.camera_mode == 'look_at':
-            vertices = nr.look_at(vertices, self.eye, up=self.up)
+            vertices = nr.look_at(vertices, self.eye, at=self.at, up=self.up)
             # perspective transformation
             if self.perspective:
                 vertices = nr.perspective(vertices, angle=self.viewing_angle)
